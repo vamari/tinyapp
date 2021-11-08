@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/vamari/tinyapp/issues"
   },
-  "homepage": "https://github.com/vamari/tinyapp#readme"
+  "homepage": "https://github.com/vamari/tinyapp#readme",
+  "dependencies": {
+    "express": "^4.17.1"
+  }
 }
