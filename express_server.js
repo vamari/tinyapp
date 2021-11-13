@@ -27,30 +27,38 @@ const users = {
   }
 };
 
-const findUsersbyEmail = (email) => {
+const userAuth = (email,pswd) => {
   for(let key in users) {
-    if(users[key].email === email) {
+    if(users[key].email === email && users[key].password === pswd) {
       return users[key];
     }
   }
   return null;
 };
 
-const findUsersbyPswd = (pswd) => {
-  for(let key in users) {
-    if(users[key].password === pswd) {
-      return users[key];
-    }
-  }
-  return null;
-};
 
 
 
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b6UTxQ: {
+      longURL: "https://www.tsn.ca",
+      userID: "aJ48lW"
+  },
+  i3BoGr: {
+      longURL: "https://www.google.ca",
+      userID: "aJ48lW"
+  }
 };
+
+const getUrlsForUser = (id) => {
+  const urls = {}
+  for( url in urlDatabase) {
+    if (urlDatabase[url].userID === id) {
+      urls[url] = urlDatabase[url];
+    }
+  } 
+  return urls;
+}
 
 app.get("/", (req, res) => {
   res.send("Hello!");
@@ -71,28 +79,59 @@ app.get("/hello", (req, res) => {
 app.get("/urls", (req, res) => {
   const user = users[req.cookies.user_id]
   // const templateVars = { urls: urlDatabase, username: req.cookies.user_id };
-  const templateVars = { urls: urlDatabase, user:user };
+  const templateVars = { urls: getUrlsForUser(req.cookies.user_id), user:user };
   res.render("urls_index", templateVars);
 
 });
 
 app.post("/urls", (req, res) => {
-  console.log(req.body); // Log the POST request body to the console
-  res.send("Ok"); // Respond with 'Ok' (we will replace this)
+  console.log(req.body); 
+  const shortURL = generateRandomString()
+  urlDatabase[shortURL] = {
+    longURL : req.body.longURL,
+    userID : req.cookies.user_id,
+
+  }
+  res.redirect(`/urls/${shortURL}`); // Respond with 'Ok' (we will replace this)
 });
 
 app.get("/urls/new", (req, res) => {
-  res.render("urls_new");
+  const user = users[req.cookies.user_id];
+  const templateVars = { urls: urlDatabase, user:user };
+  const password = req.body.password;
+ 
+  
+  if (!user){
+      
+     return res.redirect("/login")
+   }
+  res.render("urls_new", templateVars);
 });
+
+ function findUserById(userId, users) {
+  for(let user in users) {
+    if ( user === userId) {
+      return users[user];
+    }
+  }
+  return null;
+}  
+
 
 
 app.get("/urls/:shortURL", (req, res) => {
-  const templateVars = {
-    shortURL: req.params.shortURL,
-    longURL: urlDatabase[req.params.shortURL],
-  };
+ 
+ 
+
+ const userObjById = findUserById(req.cookies.user_id, users) 
+   const templateVars = {
+        shortURL: req.params.shortURL,
+        longURL: urlDatabase[req.params.shortURL].longURL,
+        user: userObjById,
+      };
+ console.log(urlDatabase)
   res.render("urls_show", templateVars);
-});
+})
 
 
 app.post("/urls/:shortURL/delete", (req, res) => {
@@ -105,7 +144,9 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 
 
 app.get("/u/:shortURL", (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL];
+  
+  const longURL = urlDatabase[req.params.shortURL].longURL;
+console.log(longURL)
   res.redirect(longURL);
 });
 
@@ -128,14 +169,14 @@ app.post("/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
 
-  const user = findUsersbyEmail(email);
-  const isPswd = findUsersbyPswd(password);
-  if (user && isPswd){
+  const user = userAuth(email, password);
+
+  if (user ){
     res.cookie("user_id", user.id);
     res.redirect("/urls")
   }else{
     res.status(401).send('User Not found');
-  }
+   }
 });
 
 app.post("/logout", (req, res) => {
@@ -178,7 +219,7 @@ app.post("/register", (req, res) => {
   const password = req.body.password;
   if (email === "" || password === "") res.status(400).send('Bad Request');
 
-  const ifExist = findUsersbyEmail(email)
+  const ifExist = userAuth(email, password)
   if (ifExist) res.status(400).send('Email exist');
 
   const id = generateRandomString();
