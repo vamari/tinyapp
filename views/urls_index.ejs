@@ -27,7 +27,7 @@
             <td><%= urls[url].longURL %></td>
             <td>
              <a href = "/urls/<%= url %>">Edit</a>
-              <form method="POST" action="/urls/9sm5xK/delete"><button type="submit">DELETE</button></form></td>
+              <form method="POST" action="/urls/<%= url %>/delete"><button type="submit">DELETE</button></form></td>
           </tr>
         <% } %>
       </tbody>
