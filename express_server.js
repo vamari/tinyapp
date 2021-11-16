@@ -2,7 +2,7 @@ const express = require("express");
 const app = express();
 const PORT = 8080;
 const cookieParser = require('cookie-parser')
-
+const bcrypt = require('bcryptjs');
 app.set("view engine", "ejs");
 
 const bodyParser = require("body-parser");
@@ -15,27 +15,36 @@ function generateRandomString() {
 
 
 const users = {
-  "userRandomID": {
-    id: "userRandomID",
-    email: "user@example.com",
-    password: "purple-monkey-dinosaur"
-  },
- "user2RandomID": {
-    id: "user2RandomID",
-    email: "user2@example.com",
-    password: "dishwasher-funk"
-  }
-};
+    "userRandomID": {
+      id: "userRandomID",
+      email: "user@example.com",
+      // purple-monkey-dinosaur
+      password: "$2a$10$wxTKhG5RIkuzsOeExN4V1e3jvfrfs/lC6ole/IYMH5PGnjgHfyH2m"
+    },
+   "user2RandomID": {
+      id: "user2RandomID",
+      email: "user2@example.com",
+      // dishwasher-funk
+      password: "$2a$10$LI48lX8GIqNQdMaONPlT3OmYE5Ekrm8Nc4PWx5T2m6ImrFRZmfyGm"
+    }
+  };
 
-
-const userAuth = (email,pswd) => {
-  for(let key in users) {
-    if(users[key].email === email && users[key].password === pswd) {
-      return users[key];
-    }
-  }
-  return null;
-};
+  const userAuth = (email) => {
+      for(let key in users) {
+        if(users[key].email === email) {
+          return users[key];
+        }
+      }
+      return null;
+    };
+// const userAuth = (email,pswd) => {
+//   for(let key in users) {
+//     if(users[key].email === email && users[key].password === pswd) {
+//       return users[key];
+//     }
+//   }
+//   return null;
+// };
 
 function checkPermission(req) {
   let userId = req.session.user_id;
@@ -184,26 +193,26 @@ app.post("/urls/:id", (req, res) => {
 // res.send(`{$userName}`)
 // });
 
-
 app.post("/login", (req, res) => {
-  const email = req.body.email;
-  const password = req.body.password;
+    const email = req.body.email;
+    const password = req.body.password;
+    const user = userAuth(email);
+    if (user){
+      const hashedPassword = user.password;
+      const isPasswordCorrect = bcrypt.compareSync(password, hashedPassword);
+      if (!isPasswordCorrect) res.status(401).send('Wrong Password');
+      res.cookie("user_id", user.id);
+      res.redirect("/urls")
+    }else{
+      res.status(401).send('User Not found');
+     }
+  });
 
-  const user = userAuth(email, password);
-
-  if (user ){
-    res.cookie("user_id", user.id);
-    res.redirect("/urls")
-  }else{
-    res.status(401).send('User Not found');
-   }
-});
-
-
-app.post("/logout", (req, res) => {
-  res.clearCookie("user_id");
-  res.redirect("/urls");
-});
+  
+  app.post("/logout", (req, res) => {
+    res.clearCookie("user_id");
+    res.redirect("/login");
+  });
 
 
 app.get("/register", (req, res) => {
@@ -231,26 +240,30 @@ app.get("/login", (req, res) => {
 //   res.redirect("/urls", templateVars)
 
 
-
 app.post("/register", (req, res) => {
-  const email = req.body.email;
-  const password = req.body.password;
-  if (email === "" || password === "") res.status(400).send('Bad Request');
-  const ifExist = userAuth(email, password);
-  if (ifExist) res.status(400).send('Email exist');
-  const id = generateRandomString();
-  const user = {
-    id: id,
-    email: email,
-    password: password,
-  }
-  users[id] = user;
-
-  res.cookie("user_id", id);
-  console.log(users);
-  res.redirect("/urls");
-
-  });
+    const email = req.body.email;
+    const password = req.body.password;
+  
+    if (email === "" || password === "") res.status(400).send('Bad Request');
+  
+    const hashedPassword = bcrypt.hashSync(password, 10);
+  
+  
+    const ifExist = userAuth(email);
+    if (ifExist) res.status(400).send('Email exist');
+    const id = generateRandomString();
+    const user = {
+      id: id,
+      email: email,
+      password: hashedPassword,
+    }
+    users[id] = user;
+  
+    res.cookie("user_id", id);
+    console.log(users);
+    res.redirect("/urls");
+  
+    });
 
 
 
